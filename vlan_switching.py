@@ -50,11 +50,6 @@ def main():
 
     ssh_session.close()
 
-    
-
-
-
-
 
 if __name__ == "__main__":
     main()

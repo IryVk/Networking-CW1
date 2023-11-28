@@ -73,7 +73,6 @@ def elect(ugly):
     return random.choice(candidates)
 
 
-
 # function to throne or dethrone routers
 def throne(ssh, router_name, priority):
     try:
@@ -95,6 +94,7 @@ def throne(ssh, router_name, priority):
 
     except Exception as e:
         print(e)
+
 
 # get router name from id
 def id_to_name(id):
@@ -121,7 +121,7 @@ def reset_ospf_process(ssh):
         print("\nWaiting 30 seconds for OSPF....\n")
         time.sleep(30)
         connection.close()
-        
+
         print("\nOSPF process reset\n")
 
     except Exception as e:
@@ -180,8 +180,6 @@ def main():
     ssh_session = ssh_con(ROUTERS[bdr]["ip"], USERNAME, PASSWORD)
     reset_ospf_process(ssh_session)
     ssh_session.close()
-
-    
 
 
 if __name__ == "__main__":
