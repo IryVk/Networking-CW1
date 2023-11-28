@@ -4,6 +4,7 @@ from tool import ssh_con, USERNAME, PASSWORD
 
 
 SWITCH = "192.168.100.10"
+## WARNING: changing the vlans breaks the switch 
 
 
 def switch_vlan(ssh, vlan):
@@ -19,15 +20,21 @@ def switch_vlan(ssh, vlan):
 
         connection.send("int range gig 0/0-3\n")
         time.sleep(.5)
-        connection.send(f"switchport access vlan {vlan}")
+        connection.send(f"switchport access vlan {vlan}\n")
 
         connection.send("int range gig 1/0-3\n")
         time.sleep(.5)
-        connection.send(f"switchport access vlan {vlan}")
+        connection.send(f"switchport access vlan {vlan}\n")
 
         connection.send("int gig 2/0\n")
         time.sleep(.5)
-        connection.send(f"switchport access vlan {vlan}")
+        connection.send(f"switchport access vlan {vlan}\n")
+
+        ## some prints to debug
+        # time.sleep(.5)
+        # outpt = connection.recv(65535)
+        # time.sleep(.5)
+        # print(str(outpt))
 
         time.sleep(.5)
         connection.close()
