@@ -1,5 +1,6 @@
 import paramiko
 import random
+import time
 
 
 # define some constants
@@ -46,13 +47,18 @@ def get_dr(ssh):
 
         # parse output
         ospf_output = stdout.read().decode()
-        dr_info = [line.split() for line in ospf_output.splitlines() if "DR" in line]
+        dr_info = [line.split() for line in ospf_output.splitlines() if "FULL" in line]
 
-        # extract dr and br
-        dr_router_id = dr_info[0][0]
-        bdr_router_id = dr_info[0][2]
+        # extract dr
+        dr = ""
+        bdr = ""
+        for x in dr_info:
+            if x[2] == "FULL/DR":
+                dr = x[0]
+            elif x[2] == "FULL/BDR":
+                bdr = x[0]
 
-        return dr_router_id, bdr_router_id
+        return dr, bdr 
 
     except Exception as e:
         print(e)
@@ -70,39 +76,103 @@ def elect(ugly):
 def throne(ssh, router_name, priority):
     try:
         # configure OSPF router priority
-        command = f"interface gig 0/0\nip ospf priority {priority}"
-        _, _, stderr = ssh.exec_command(command)
+        connection = ssh.invoke_shell()
+        connection.send("enable\n")
+        time.sleep(.5)
+        connection.send("Arwa123@enable\n")
+        time.sleep(.5)
+        connection.send("conf t\n")
+        time.sleep(.5)
+        connection.send("int gig 0/0\n")
+        time.sleep(.5)
+        connection.send(f"ip ospf priority {priority}\n")
+        time.sleep(.5)
+        connection.close()
 
-        # error check
-        if stderr.read():
-            print(f"Error changing priority: {stderr.read().decode()}")
-        else:
-            print(f"Priority changed for router {router_name}")
+        print(f"Priority of {router_name} changed")
 
     except Exception as e:
-        print(f"e")
+        print(e)
+
+# get router name from id
+def id_to_name(id):
+    for name, data in ROUTERS.items():
+        if data["id"] == id:
+            return name
+
+
+# function to reset ospf process
+def reset_ospf_process(ssh):
+    try:
+        # reset ospf process
+        connection = ssh.invoke_shell()
+        connection.send("enable\n")
+        time.sleep(.5)
+        connection.send("Arwa123@enable\n")
+        time.sleep(.5)
+        connection.send("clear ip ospf process\n")
+        time.sleep(.5)
+        connection.send("y\n")
+        # wait 30 seconds for advertisement process
+        print("Waiting 30 seconds...")
+        time.sleep(30)
+        connection.close()
+        print("OSPF process reset")
+
+    except Exception as e:
+        print(e)
 
 
 def main():
     # connect to R1 to find who the DR is
     ssh_session = ssh_con(ROUTERS["R1"]["ip"], USERNAME, PASSWORD)
     dr, bdr = get_dr(ssh_session)
+    # if no dr found then R1 is the dr
+    if dr:
+        dr = id_to_name(dr)
+    else:
+        dr = "R1"
+    # if no bdr found then R1 is the bdr
+    if bdr:
+        bdr = id_to_name(bdr)
+    else:
+        bdr = "R1"
     print(f"Current DR is {dr}")
+    print(f"Current BDR is {bdr}")
+
     new_dr = elect(dr)
+    print(f"New DR is {new_dr}")
 
     # end current ssh session
     ssh_session.close()
     print("Closed Session with R1")
+    
+    # throne new dr
+    ssh_session = ssh_con(ROUTERS[new_dr]["ip"], USERNAME, PASSWORD)
+    throne(ssh_session, new_dr, "255")
+    ssh_session.close()
 
-    print(f"Starting Session with {dr}")
-    ssh_session = ssh_con(ROUTERS[dr]["ip"], USERNAME, PASSWORD)
+    # reset ospf for new dr
+    ssh_session = ssh_con(ROUTERS[new_dr]["ip"], USERNAME, PASSWORD)
+    reset_ospf_process(ssh_session)
+    ssh_session.close()
+    
     # dethrone current dr
+    ssh_session = ssh_con(ROUTERS[dr]["ip"], USERNAME, PASSWORD)
     throne(ssh_session, dr, "1")
     ssh_session.close()
 
-    # throne new dr
-    throne(ssh_session, dr, "100")
+    # reset ospf for dr
+    ssh_session = ssh_con(ROUTERS[dr]["ip"], USERNAME, PASSWORD)
+    reset_ospf_process(ssh_session)
     ssh_session.close()
+
+    # reset ospf for bdr
+    ssh_session = ssh_con(ROUTERS[bdr]["ip"], USERNAME, PASSWORD)
+    reset_ospf_process(ssh_session)
+    ssh_session.close()
+
+    
 
 
 if __name__ == "__main__":
