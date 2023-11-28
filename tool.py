@@ -35,6 +35,7 @@ def ssh_con(host, user, psswd):
         ssh.connect(host, username=user, password=psswd, allow_agent=False, look_for_keys=False)
         print(f"Established ssh connection to {host}")
         return ssh
+    
     except Exception as e:
         print(e)
         return None
@@ -111,13 +112,16 @@ def reset_ospf_process(ssh):
         time.sleep(.5)
         connection.send("Arwa123@enable\n")
         time.sleep(.5)
+
         connection.send("clear ip ospf process\n")
         time.sleep(.5)
         connection.send("y\n")
+
         # wait 30 seconds for advertisement process
         print("\nWaiting 30 seconds for OSPF....\n")
         time.sleep(30)
         connection.close()
+        
         print("\nOSPF process reset\n")
 
     except Exception as e:
@@ -128,7 +132,7 @@ def main():
     # connect to R1 to find who the DR is
     ssh_session = ssh_con(ROUTERS["R1"]["ip"], USERNAME, PASSWORD)
     dr, bdr = get_dr(ssh_session)
-    
+
     # if no dr found then R1 is the dr
     if dr:
         dr = id_to_name(dr)
