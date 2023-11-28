@@ -40,6 +40,7 @@ def ssh_con(host, user, psswd):
         return None
 
 
+# function to get DR and BR
 def get_dr(ssh):
     try:
         # get ospf neighbors
@@ -114,10 +115,10 @@ def reset_ospf_process(ssh):
         time.sleep(.5)
         connection.send("y\n")
         # wait 30 seconds for advertisement process
-        print("Waiting 30 seconds...")
+        print("\nWaiting 30 seconds for OSPF....\n")
         time.sleep(30)
         connection.close()
-        print("OSPF process reset")
+        print("\nOSPF process reset\n")
 
     except Exception as e:
         print(e)
@@ -127,6 +128,7 @@ def main():
     # connect to R1 to find who the DR is
     ssh_session = ssh_con(ROUTERS["R1"]["ip"], USERNAME, PASSWORD)
     dr, bdr = get_dr(ssh_session)
+    
     # if no dr found then R1 is the dr
     if dr:
         dr = id_to_name(dr)
@@ -137,15 +139,18 @@ def main():
         bdr = id_to_name(bdr)
     else:
         bdr = "R1"
+
+    print()
     print(f"Current DR is {dr}")
     print(f"Current BDR is {bdr}")
+    print()
 
     new_dr = elect(dr)
     print(f"New DR is {new_dr}")
+    print()
 
     # end current ssh session
     ssh_session.close()
-    print("Closed Session with R1")
     
     # throne new dr
     ssh_session = ssh_con(ROUTERS[new_dr]["ip"], USERNAME, PASSWORD)
